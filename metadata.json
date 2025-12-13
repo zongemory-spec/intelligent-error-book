@@ -1,0 +1,7 @@
+{
+  "name": "Smart Error Book (Intelligent Review System)",
+  "description": "An intelligent mistake notebook application based on the Ebbinghaus Forgetting Curve. Features image upload, simulated OCR, and automated review scheduling.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

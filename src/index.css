@@ -1,0 +1,10 @@
+/* 
+  我们已经在 index.html 中使用了 Tailwind CDN，
+  所以这里不需要 @tailwind 指令，否则可能会在没有配置 PostCSS 时报错。
+*/
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: #f9fafb; /* gray-50 */
+}
