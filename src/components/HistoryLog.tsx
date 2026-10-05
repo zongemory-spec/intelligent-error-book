@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ReviewLog } from '../types';
+import type { ReviewLog } from '../types';
 import { getReviewLogs } from '../services/storageService';
-import { CheckCircle2, XCircle, Clock, Calendar } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock } from 'lucide-react';
 
 export const HistoryLog: React.FC = () => {
   const [logs, setLogs] = useState<ReviewLog[]>([]);

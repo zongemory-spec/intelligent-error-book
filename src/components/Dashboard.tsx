@@ -67,7 +67,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ mistakes, onNavigate }) =>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={subjectData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                  {subjectData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                  {subjectData.map((_, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                 </Pie>
                 <Tooltip />
                 <Legend />

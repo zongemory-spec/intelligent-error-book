@@ -3,7 +3,7 @@ import { Subject } from '../types';
 import type { Mistake } from '../types';
 import { saveMistake } from '../services/storageService';
 import { callTongyiAI } from '../services/aiService'; // 引入通义千问服务
-import { Loader2, Camera, CheckCircle, Sparkles, ScanText, Wand2 } from 'lucide-react';
+import { Camera, CheckCircle, Sparkles, ScanText, Wand2 } from 'lucide-react';
 
 interface AddMistakeProps {
   onSuccess: () => void;
