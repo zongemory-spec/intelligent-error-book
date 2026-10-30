@@ -1,10 +1,11 @@
-/* 
-  我们已经在 index.html 中使用了 Tailwind CDN，
-  所以这里不需要 @tailwind 指令，否则可能会在没有配置 PostCSS 时报错。
-*/
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
   background-color: #f9fafb; /* gray-50 */
 }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }

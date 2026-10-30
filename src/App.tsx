@@ -35,7 +35,7 @@ export default function App() {
             <BookOpen className="w-8 h-8" />
             <h1 className="text-xl font-bold tracking-tight">智能错题本</h1>
           </div>
-          <p className="text-xs text-gray-400 mt-2">Based on Ebbinghaus Curve</p>
+          <p className="text-xs text-gray-400 mt-2">间隔复习 · 本地演示</p>
         </div>
         
         <nav className="p-4 space-y-2">
@@ -72,6 +72,7 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 md:ml-64 p-6 md:p-12 max-w-7xl mx-auto w-full">
         <header className="mb-8">
+          <p className="text-sm text-blue-800 bg-blue-50 border border-blue-100 rounded-lg p-3 mb-4">无 Key 演示 · 内置解析为预设示例，未调用真实 AI。记录仅保存在当前浏览器。</p>
           <h2 className="text-3xl font-bold text-gray-900">
             {currentPage === 'dashboard' && '学习概览'}
             {currentPage === 'add' && '错题录入'}

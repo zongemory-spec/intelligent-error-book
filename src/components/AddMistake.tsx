@@ -2,12 +2,10 @@ import React, { useState, useRef } from 'react';
 import { Subject } from '../types';
 import type { Mistake } from '../types';
 import { saveMistake } from '../services/storageService';
-import { callTongyiAI } from '../services/aiService'; // 引入通义千问服务
-import { Camera, CheckCircle, Sparkles, ScanText, Wand2 } from 'lucide-react';
+import { DEMO_EXAMPLES, getDemoTitle, getDemoAnswer } from '../services/aiService';
+import { Camera, CheckCircle, Sparkles, Wand2 } from 'lucide-react';
 
-interface AddMistakeProps {
-  onSuccess: () => void;
-}
+interface AddMistakeProps { onSuccess: () => void; }
 
 export const AddMistake: React.FC<AddMistakeProps> = ({ onSuccess }) => {
   const [title, setTitle] = useState('');
@@ -15,130 +13,88 @@ export const AddMistake: React.FC<AddMistakeProps> = ({ onSuccess }) => {
   const [questionText, setQuestionText] = useState('');
   const [answerText, setAnswerText] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  
-  const [isOCRProcessing, setIsOCRProcessing] = useState(false);
-  const [isTitleProcessing, setIsTitleProcessing] = useState(false);
-  const [isAnswerProcessing, setIsAnswerProcessing] = useState(false);
-  
+  const [notice, setNotice] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
   };
 
-  const handleAIError = (error: any, action: string) => {
-    console.error(`${action} Failed:`, error);
-    let message = `${action}失败：${error.message}`;
-    if (!process.env.DASHSCOPE_API_KEY) {
-      message = `未配置 DASHSCOPE_API_KEY，请在 .env 文件中添加。`;
-    }
-    alert(message);
+  const loadExample = (index: number) => {
+    const item = DEMO_EXAMPLES[index];
+    setSubject(item.subject); setQuestionText(item.question);
+    setTitle(''); setAnswerText(''); setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setNotice('已载入演示题目，可点击“示例知识点”和“示例解析”；这些内容不是实时 AI 生成。');
   };
 
-  // 1. OCR 识别
-  const handleOCR = async () => {
-    if (!imagePreview) return;
-    setIsOCRProcessing(true);
+  const handleDemo = (kind: 'title' | 'answer') => {
     try {
-      const base64Data = imagePreview.split(',')[1];
-      const text = await callTongyiAI({
-        prompt: "请识别这张图片中的题目内容。直接输出文本，不要包含多余的描述。如果包含数学公式，请尽量保持格式完整。",
-        imageBase64: base64Data
-      });
-      setQuestionText(text);
-    } catch (error) { 
-      handleAIError(error, "识别"); 
-    } finally { 
-      setIsOCRProcessing(false); 
+      if (kind === 'title') setTitle(getDemoTitle(questionText));
+      else setAnswerText(getDemoAnswer(questionText));
+      setNotice('已填入预设演示内容，请核对后保存。');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : '请手动填写内容。');
     }
   };
 
-  // 2. 自动生成标题
-  const handleAutoTitle = async () => {
-    if (!questionText) { alert("请先输入题目"); return; }
-    setIsTitleProcessing(true);
-    try {
-      const text = await callTongyiAI({
-        prompt: `提取以下题目的核心考点或知识点。要求：10字以内，不含前缀，直接输出名称。\n\n题目：${questionText}`
-      });
-      setTitle(text.trim());
-    } catch (error) { 
-      handleAIError(error, "提取"); 
-    } finally { 
-      setIsTitleProcessing(false); 
-    }
-  };
-
-  // 3. 智能解析
-  const handleSmartAnswer = async () => {
-      if(!questionText) return;
-      setIsAnswerProcessing(true);
-      try {
-        const text = await callTongyiAI({
-          prompt: `请做一名${subject}老师，为以下题目提供详细的解答步骤和解析。\n\n题目：${questionText}`,
-          systemPrompt: "你是一个智能助教，请直接给出答案和解析，格式清晰，不要过多的客套话。"
-        });
-        setAnswerText(text);
-      } catch (error) { 
-        handleAIError(error, "解析"); 
-      } finally { 
-        setIsAnswerProcessing(false); 
-      }
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title || !questionText) return;
-
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!title.trim() || !questionText.trim()) return;
+    const now = Date.now();
     const newMistake: Mistake = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title, subject, imageUrl: imagePreview || undefined,
-      questionText, answerText,
-      createdAt: Date.now(), stage: 0, reviewCount: 0, nextReviewAt: Date.now() 
+      id: `${now}-${Math.random().toString(36).slice(2, 11)}`,
+      title: title.trim(), subject, imageUrl: imagePreview || undefined,
+      questionText: questionText.trim(), answerText,
+      createdAt: now, stage: 0, reviewCount: 0, nextReviewAt: now,
     };
-    saveMistake(newMistake);
-    onSuccess();
+    try { saveMistake(newMistake); onSuccess(); }
+    catch { setNotice('保存失败，浏览器存储可能不可用或已满，请缩小图片或检查浏览器设置后重试。'); }
   };
 
   return (
     <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-gray-100 animate-fade-in">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">录入新错题</h2>
+      <h2 className="text-2xl font-bold text-gray-800 mb-4">录入新错题</h2>
+      <section className="rounded-lg bg-blue-50 border border-blue-100 p-4 mb-6" aria-label="内置演示题目">
+        <p className="text-sm text-blue-900 mb-3">无 Key 演示：预设解析仅用于体验流程，自定义题目请手动填写。</p>
+        <div className="flex flex-wrap gap-2">{DEMO_EXAMPLES.map((item, index) => (
+          <button key={item.id} type="button" onClick={() => loadExample(index)} className="px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm text-blue-700 hover:bg-blue-100">{item.label}</button>
+        ))}</div>
+      </section>
+      {notice && <p role="status" className="text-sm text-amber-900 bg-amber-50 border border-amber-100 p-3 rounded-lg mb-4">{notice}</p>}
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center cursor-pointer hover:border-blue-500 transition-colors bg-gray-50 group" onClick={() => fileInputRef.current?.click()}>
-          {imagePreview ? <img src={imagePreview} className="h-48 object-contain" /> : <><Camera className="w-8 h-8 text-gray-400 mb-2 group-hover:scale-110 transition-transform" /><p className="text-gray-500">点击上传图片</p></>}
-          <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
-        </div>
-
         <div>
-          <div className="flex justify-between mb-1"><label className="text-sm font-medium">题目内容</label>
-           {imagePreview && <button type="button" onClick={handleOCR} disabled={isOCRProcessing} className="text-xs text-blue-600 flex items-center hover:text-blue-800"><ScanText className="w-3 h-3 mr-1"/>{isOCRProcessing?'通义识别中...':'AI 识别'}</button>}
+          <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center hover:border-blue-500 bg-gray-50">
+            {imagePreview ? <img src={imagePreview} alt="本地题目预览" className="h-48 object-contain" /> : <><Camera className="w-8 h-8 text-gray-400 mb-2"/><span className="text-gray-500">点击上传图片</span></>}
+          </button>
+          <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload}/>
+          <p className="text-xs text-gray-500 mt-2">图片仅用于本地预览与保存，本演示未接入 OCR，不会上传至模型服务。</p>
+        </div>
+        <div>
+          <label htmlFor="subject" className="block text-sm font-medium mb-1">学科</label>
+          <select id="subject" value={subject} onChange={event => setSubject(event.target.value as Subject)} className="w-full px-4 py-2 border rounded-lg mb-2">{Object.values(Subject).map(item => <option key={item} value={item}>{item}</option>)}</select>
+          <label htmlFor="question" className="block text-sm font-medium mb-1">题目内容</label>
+          <textarea id="question" required rows={4} value={questionText} onChange={event => setQuestionText(event.target.value)} className="w-full px-4 py-2 border rounded-lg" placeholder="题目内容..."/>
+        </div>
+        <div>
+          <div className="flex justify-between mb-1"><label htmlFor="knowledge" className="text-sm font-medium">知识点</label>
+            <button type="button" disabled={!questionText.trim()} onClick={() => handleDemo('title')} className="text-xs text-amber-700 flex items-center disabled:opacity-40"><Wand2 className="w-3 h-3 mr-1"/>示例知识点</button>
           </div>
-          <select value={subject} onChange={(e) => setSubject(e.target.value as Subject)} className="w-full px-4 py-2 border rounded-lg mb-2">{Object.values(Subject).map(s => <option key={s} value={s}>{s}</option>)}</select>
-          <textarea required rows={4} value={questionText} onChange={(e) => setQuestionText(e.target.value)} className="w-full px-4 py-2 border rounded-lg" placeholder="题目内容..." />
+          <input id="knowledge" type="text" required value={title} onChange={event => setTitle(event.target.value)} className="w-full px-4 py-2 border rounded-lg" placeholder="例如：导数"/>
         </div>
-
         <div>
-           <div className="flex justify-between mb-1"><label className="text-sm font-medium">知识点</label>
-            <button type="button" onClick={handleAutoTitle} disabled={!questionText || isTitleProcessing} className="text-xs text-amber-600 flex items-center hover:text-amber-800"><Wand2 className="w-3 h-3 mr-1"/>{isTitleProcessing?'通义提取中...':'AI 提取'}</button>
-           </div>
-           <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-2 border rounded-lg" placeholder="例如：导数" />
+          <div className="flex justify-between mb-1"><label htmlFor="answer" className="text-sm font-medium">解析</label>
+            <button type="button" disabled={!questionText.trim()} onClick={() => handleDemo('answer')} className="text-xs text-purple-700 flex items-center disabled:opacity-40"><Sparkles className="w-3 h-3 mr-1"/>示例解析</button>
+          </div>
+          <textarea id="answer" rows={6} value={answerText} onChange={event => setAnswerText(event.target.value)} className="w-full px-4 py-2 border rounded-lg" placeholder="答案解析..."/>
         </div>
-
-        <div>
-            <div className="flex justify-between mb-1"><label className="text-sm font-medium">解析</label>
-             <button type="button" onClick={handleSmartAnswer} disabled={!questionText || isAnswerProcessing} className="text-xs text-purple-600 flex items-center hover:text-purple-800"><Sparkles className="w-3 h-3 mr-1"/>{isAnswerProcessing?'通义生成中...':'AI 解析'}</button>
-            </div>
-          <textarea rows={4} value={answerText} onChange={(e) => setAnswerText(e.target.value)} className="w-full px-4 py-2 border rounded-lg" placeholder="答案解析..." />
-        </div>
-
         <div className="flex justify-end space-x-4 pt-4">
           <button type="button" onClick={onSuccess} className="px-6 py-2 border rounded-lg hover:bg-gray-50">取消</button>
-          <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg flex items-center hover:bg-blue-700 shadow-lg"><CheckCircle className="w-4 h-4 mr-2" /> 保存</button>
+          <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg flex items-center hover:bg-blue-700"><CheckCircle className="w-4 h-4 mr-2"/>保存</button>
         </div>
       </form>
     </div>
